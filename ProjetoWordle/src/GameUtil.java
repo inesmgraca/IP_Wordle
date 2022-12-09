@@ -1,45 +1,55 @@
-class GameUtil {
-
+class GameUtil
+{
 	static void drawIcon(ColorImage img, int x, int y, int state, char c)
-	{
+	{		
 		for (int i = 0; i < Constantes.ICON_SIZE; i++)
 			for (int j = 0; j < Constantes.ICON_SIZE; j++)
-				if (state == 3)
+				if (state == Constantes.CORRECT_POSITION)
 					img.setColor(x + i, y + j, Constantes.CORRECT_BG);
-				else if (state == 2)
+				else if (state == Constantes.EXISTS)
 					img.setColor(x + i, y + j, Constantes.EXISTS_BG);
-				else if (state == 1)
+				else if (state == Constantes.NOT_EXISTS)
 					img.setColor(x + i, y + j, Constantes.NOT_IN_WORD_BG);
 				else
 					img.setColor(x + i, y + j, Constantes.EMPTY_BG);
 		
-		img.drawCenteredText(x + Constantes.ICON_SIZE / 2, y + Constantes.ICON_SIZE / 2, String.valueOf(c).toUpperCase(), 30, Color.WHITE);
+		img.drawCenteredText(x + Constantes.ICON_SIZE / 2, y + Constantes.ICON_SIZE / 2, String.valueOf(c), 30, Color.WHITE);
 	}
 	
 	static void drawBoard(ColorImage img, char[][] board, String puzzle)
 	{
+		boolean firstNull = true;
 		int y = Constantes.ICON_SIZE;
 		
-		boolean firstNull = true;
-		
-		for (char[] word : board)
+		for (int a = 0; a < board.length; a++)
 		{
-			int x = img.getWidth() / 2
-					- Constantes.ICON_SIZE * (word.length / 2)
-					- Constantes.ICON_SPACING * (word.length / 2)
-					- (word.length % 2 == 0 ? Constantes.ICON_SPACING / 2 : Constantes.ICON_SIZE / 2);
+			int x = img.getWidth() / 2 - (Constantes.ICON_SIZE + Constantes.ICON_SPACING) * (puzzle.length() / 2)
+					- (puzzle.length() % 2 == 0 ? Constantes.ICON_SPACING : Constantes.ICON_SIZE) / 2;
 			
-			for (char c : word)
+			if (board[a] != null)
 			{
-				if (c != 0)
+				for (int b = 0; b < puzzle.length(); b++)
 				{
-					int colorState = String.valueOf(word).indexOf(c) == puzzle.indexOf(c) ? 3 : (puzzle.indexOf(c) != -1 ? 2 : 1);
-					drawIcon(img, x, y, colorState, c);
+					int state = board[a][b] == puzzle.toCharArray()[b] ? Constantes.CORRECT_POSITION :
+						(puzzle.indexOf(board[a][b]) != -1 ? Constantes.EXISTS : Constantes.NOT_EXISTS);
+					
+					drawIcon(img, x, y, state, board[a][b]);
+					x += Constantes.ICON_SIZE + Constantes.ICON_SPACING;
 				}
-				else
+				
+				if (new String(board[a]).equals(puzzle))
+					firstNull = false;
+			}
+			else
+			{
+				for (int b = 0; b < puzzle.length(); b++)
 				{
 					if (firstNull)
 					{
+						for (int i = 0; i < Constantes.ICON_SIZE; i++)
+							for (int j = 0; j < Constantes.ICON_SIZE; j++)
+								img.setColor(x + i, y + j, Constantes.DEFAULT_BG);
+						
 						for (int i = 0; i < Constantes.ICON_SIZE / 10; i++)
 							for (int j = 0; j < Constantes.ICON_SIZE; j++)
 							{
@@ -53,12 +63,12 @@ class GameUtil {
 						for (int i = 0; i < Constantes.ICON_SIZE; i++)
 							for (int j = 0; j < Constantes.ICON_SIZE; j++)
 								img.setColor(x + i, y + j, Constantes.NOT_IN_WORD_BG);
+					
+					x += Constantes.ICON_SIZE + Constantes.ICON_SPACING;
 				}
-				
-				x += Constantes.ICON_SIZE + Constantes.ICON_SPACING;
 			}
 			
-			if (word[0] == 0 && firstNull)
+			if (board[a] == null && firstNull)
 				firstNull = false;
 			
 			y += Constantes.ICON_SIZE + Constantes.ICON_SPACING;
@@ -71,10 +81,8 @@ class GameUtil {
 		
 		for (char[] line : keyboard)
 		{
-			int x = img.getWidth() / 2
-					- Constantes.ICON_SIZE * (line.length / 2)
-					- Constantes.ICON_SPACING * (line.length / 2)
-					- (line.length % 2 == 0 ? Constantes.ICON_SPACING / 2 : Constantes.ICON_SIZE / 2);
+			int x = img.getWidth() / 2 - (Constantes.ICON_SIZE + Constantes.ICON_SPACING) * (line.length / 2)
+					- (line.length % 2 == 0 ? Constantes.ICON_SPACING : Constantes.ICON_SIZE) / 2;
 			
 			for (char c : line)
 			{
@@ -83,7 +91,7 @@ class GameUtil {
 			}
 			
 			y += Constantes.ICON_SIZE + Constantes.ICON_SPACING;
-		}
+		}	
 	}
 
 	static String replaceSpecialChars(String str)
@@ -93,7 +101,7 @@ class GameUtil {
 		for (int i = 0; i < chars.length; i++)
 		{
 			if (chars[i] >= 'À' && chars[i] <= 'Æ')
-				chars[i] = 'A';
+					chars[i] = 'A';
 			if (chars[i] >= 'È' && chars[i] <= 'Ë')
 					chars[i] = 'E';
 			if (chars[i] >= 'Ì' && chars[i] <= 'Ï')
@@ -106,6 +114,6 @@ class GameUtil {
 				chars[i] = 'C';
 		}
 		
-		return chars.toString();
+		return new String(chars);
 	}
 }

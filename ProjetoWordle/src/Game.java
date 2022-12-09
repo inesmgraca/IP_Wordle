@@ -1,161 +1,129 @@
-class Game {
-
-	private char[][] board;
-	private char[][] keyboard;
-	private Stats stats;
+class Game
+{
+	private Stats stats = new Stats(Constantes.MAX_LINES);
+	private char[][] keyboard = Constantes.QWERTY;
+	private Dictionary dictionary = new Dictionary("pt_br.txt");
 	private String puzzle;
-	private Dictionary dictionary;
+	private char[][] board;
 	private int[] keyStates;
-	public ColorImage img;
+	private int line;
+	public ColorImage img = new ColorImage(Constantes.DEFAULT_WIDTH, Constantes.DEFAULT_HEIGHT, Constantes.DEFAULT_BG);
 
 	Game(ColorImage bg)
 	{
-		board = new char[Constantes.MAX_LINES][6];
-		keyboard = Constantes.QWERTY;
-		dictionary = new Dictionary("pt_br.txt");
 		img = bg;
-		
-		createPuzzle();
-		createKeyStates();
-		GameUtil.drawBoard(img, board, puzzle);
-		GameUtil.drawKeyboard(img, keyboard, keyStates);
+		startGame(6);
 	}
 	
 	Game(Dictionary dictionary)
 	{
-		board = new char[Constantes.MAX_LINES][6];
-		keyboard = Constantes.QWERTY;
 		this.dictionary = dictionary;
-		img = new ColorImage(Constantes.DEFAULT_WIDTH, Constantes.DEFAULT_HEIGHT, Constantes.DEFAULT_BG);
-
-		createPuzzle();
-		createKeyStates();
-		GameUtil.drawBoard(img, board, puzzle);
-		GameUtil.drawKeyboard(img, keyboard, keyStates);
-	}
-
-	Game(ColorImage bg, int length)
-	{
-		board = new char[Constantes.MAX_LINES][length];
-		keyboard = Constantes.QWERTY;
-		dictionary = new Dictionary("pt_br.txt");
-		img = bg;
-
-		createPuzzle();
-		createKeyStates();
-		GameUtil.drawBoard(img, board, puzzle);
-		GameUtil.drawKeyboard(img, keyboard, keyStates);
-	}
-	
-	Game(Dictionary dictionary, int length)
-	{
-		board = new char[Constantes.MAX_LINES][length];
-		keyboard = Constantes.QWERTY;
-		this.dictionary = dictionary;
-		img = new ColorImage(Constantes.DEFAULT_WIDTH, Constantes.DEFAULT_HEIGHT, Constantes.DEFAULT_BG);
-
-		createPuzzle();
-		createKeyStates();
-		GameUtil.drawBoard(img, board, puzzle);
-		GameUtil.drawKeyboard(img, keyboard, keyStates);
+		startGame(6);
 	}
 	
 	Game(int length)
 	{
-		board = new char[Constantes.MAX_LINES][length];
-		keyboard = Constantes.QWERTY;
-		this.dictionary = new Dictionary("pt_br.txt");
-		img = new ColorImage(Constantes.DEFAULT_WIDTH, Constantes.DEFAULT_HEIGHT, Constantes.DEFAULT_BG);
-
-		createPuzzle();
+		startGame(length);
+	}
+	
+	private void startGame(int length)
+	{
+		line = 0;
+		board = new char[Constantes.MAX_LINES][];
+		createPuzzle(length);
 		createKeyStates();
 		GameUtil.drawBoard(img, board, puzzle);
 		GameUtil.drawKeyboard(img, keyboard, keyStates);
 	}
 	
-	void createPuzzle()
+	private void createPuzzle(int length)
 	{
-		puzzle = dictionary.generateSecretWord(board[0].length);
+		puzzle = dictionary.generateSecretWord(length);
 	}
 	
-	void createKeyStates()
+	private void createKeyStates()
 	{
 		keyStates = new int[26];
 	}
 	
-	void updateKeyStates(String word, String puzzle)
+	public void insertWord(String word)
+	{		
+		if (line == board.length || (line != 0 && new String(board[line - 1]).equals(puzzle)))
+			throw new IllegalStateException("O jogo já terminou");
+		
+		if (word.isEmpty() || word.equals(null) || word.equals(""))
+			throw new NullPointerException("A palavra é nula");
+		
+		if (word.length() != puzzle.length())
+			throw new IllegalArgumentException("A palavra não tem o comprimento correto");
+
+		word = GameUtil.replaceSpecialChars(word.toUpperCase());
+
+		for (int i = 0; i < board.length; i++)
+			if (board[i] != null && new String(board[i]).equals(word))
+				throw new IllegalArgumentException("A palavra já foi inserida");
+		
+		for (int i = 0; i < word.length(); i++)
+			if (word.toCharArray()[i] == ' ' || (word.toCharArray()[i] >= '0' && word.toCharArray()[i] <= '9'))
+				throw new IllegalArgumentException("A palavra é inválida");
+
+		if (!dictionary.exists(word))
+			throw new IllegalArgumentException("A palavra não existe");
+		
+		updateGame(word);
+
+		if (word.equals(puzzle) || line == board.length)
+			endGame();
+	}
+
+	private void updateGame(String word)
+	{
+		board[line] = word.toCharArray();
+		line++;
+				
+		updateKeyStates(word);
+		GameUtil.drawBoard(img, board, puzzle);
+		GameUtil.drawKeyboard(img, keyboard, keyStates);
+	}
+	
+	private void updateKeyStates(String word)
 	{
 		for (char c : word.toCharArray())
 		{
-			switch (keyStates[c - 'A'])
-			{
-				case 0:
-				case 1:
-					keyStates[c - 'A'] = word.indexOf(c) == puzzle.indexOf(c) ? 3 : (puzzle.indexOf(c) != -1 ? 2 : 1);
-					break;
-				case 2:
-					keyStates[c - 'A'] = word.indexOf(c) == puzzle.indexOf(c) ? 3 : 2;
-					break;
-				case 3:
-					break;
-				default:
-					throw new IllegalStateException();
-			}
+			if (keyStates[c - 'A'] == Constantes.UNTESTED)
+				keyStates[c - 'A'] = word.indexOf(c) == puzzle.indexOf(c) ? Constantes.CORRECT_POSITION : (puzzle.indexOf(c) != -1 ? Constantes.EXISTS : Constantes.NOT_EXISTS);
+			
+			if (keyStates[c - 'A'] == Constantes.EXISTS)
+				keyStates[c - 'A'] = word.indexOf(c) == puzzle.indexOf(c) ? Constantes.CORRECT_POSITION : Constantes.EXISTS;
 		}
 	}
 	
-	void insertWord(String word)
+	private void endGame()
 	{
-		if (word == null)
-			throw new NullPointerException("A palavra é nula");
-		
-		if (word.length() > puzzle.length())
-			throw new IllegalArgumentException("A palavra é demasiado comprida");
-		
-		for (int i = 0; i < word.length(); i++)
-			if (word.toCharArray()[i] >= ' ' || (word.toCharArray()[i] >= '0' && word.toCharArray()[i] >= '9'))
-				throw new IllegalArgumentException("A palavra é inválida");
-		
-			int line = 0;
-
-		for (int i = 0; i < board.length; i++)
+		if (new String(board[line - 1]).equals(puzzle))
 		{
-			if (board[i] == null)
-			{
-				word = GameUtil.replaceSpecialChars(word.toUpperCase());
-				line = i;
-				break;
-			}
+			stats.addVictory(line);
+			System.out.print("Parabéns! ");
+		}
+		if (line == board.length)
+		{
+			stats.addDefeat();
+			System.out.print("Perdeu! ");
 		}
 		
-		updateKeyStates(word, puzzle);
-		GameUtil.drawBoard(img, board, puzzle);
-		GameUtil.drawKeyboard(img, keyboard, keyStates);
-
-		boolean win = true;
-		boolean defeat = false;
+		System.out.println("A palavra original era: " + dictionary.getOriginalWord(puzzle));
+	}
+	
+	public ColorImage viewStats()
+	{
+		return stats.view();
+	}
+	
+	public void startNewGame()
+	{
+		if (!(line == board.length || (line != 0 && new String(board[line - 1]).equals(puzzle))))
+			throw new IllegalStateException("O jogo ainda não terminou");
 		
-		for (int i = 0; i < puzzle.length(); i++)
-			if (word.toCharArray()[i] != puzzle.toCharArray()[i])
-				win = false;
-
-		if (board[board.length - 1] != null)
-			defeat = true;
-
-		if (win || defeat)
-		{
-			if (win)
-			{
-				stats.addVictory(line);
-				System.out.print("Parabéns! ");
-			}
-			if (defeat)
-			{
-				stats.addDefeat();
-				System.out.print("Perdeu! ");
-			}
-			
-			System.out.println("A palavra original era: " + dictionary.getOriginalWord(puzzle));
-		}
+		startGame(puzzle.length());
 	}
 }
