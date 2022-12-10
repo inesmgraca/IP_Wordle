@@ -102,10 +102,10 @@ class Game
 	{
 		if (new String(board[line - 1]).equals(puzzle))
 		{
-			stats.addVictory(line);
+			stats.addVictory(line - 1);
 			System.out.print("Parabéns! ");
 		}
-		if (line == board.length)
+		else if (line == board.length)
 		{
 			stats.addDefeat();
 			System.out.print("Perdeu! ");
